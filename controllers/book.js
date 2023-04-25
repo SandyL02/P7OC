@@ -126,21 +126,14 @@ exports.rating = (req, res, next) => {
     };
 
     exports.getBestRating = (req, res, next) => {
-      Book.find({})
-        .sort({ averageRating: -1 })
+      Book.find()
+        .sort({ averageRating: 'desc' })
         .limit(3)
         .then((books) => {
-          const bestBooks = books.map((book) => {
-            return {
-              id: book._id,
-              title: book.title,
-              author: book.author,
-              averageRating: book.averageRating,
-            };
-          });
-          res.status(200).json(bestBooks);
+          res.status(200).json(books);
         })
         .catch((error) => {
           res.status(400).json({ error });
         });
     };
+    
