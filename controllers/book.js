@@ -14,7 +14,11 @@ exports.createBook = (req, res, next) => {
 
   book.save()
   .then(() => { res.status(201).json({message: 'Objet enregistré !'})})
-  .catch(error => { res.status(400).json( { error })})
+  .catch((err) => {
+    console.log(err);
+   res.status(401).json({ err });
+
+  }); 
 };
 
 exports.modifyBook = (req, res, next) => {
@@ -88,8 +92,6 @@ exports.rating = (req, res, next) => {
  
  const raterId = req.body.userId;
  const grade = req.body.rating;
- console.log(raterId, grade, req.params.id)
-
  const token = req.headers.authorization.split(' ')[1];
  const decodedToken = jwt.verify(token, process.env.JWT_TOKEN);
  const userId = decodedToken.userId;
@@ -102,12 +104,12 @@ exports.rating = (req, res, next) => {
     
           if (existingRating || userId !== raterId) {
             // L'utilisateur a déjà noté ce livre
-            res.status(403).json({message: 'Not authorized'});
+            res.status(403).json({message: 'Vous avez déjà noté ce livre'});
           } else {
     
             // Calculer la nouvelle note moyenne pour le livre
             const totalRating = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
-            const averageRating = (totalRating + grade) / (book.ratings.length + 1);
+            const averageRating = ((totalRating + grade) / (book.ratings.length + 1)).toFixed(1);
       
             // Mettre à jour la note moyenne et la liste des notes pour le livre
             book.averageRating = averageRating;
@@ -127,6 +129,7 @@ exports.rating = (req, res, next) => {
 
     exports.getBestRating = (req, res, next) => {
       Book.find()
+      // Permet de trier selon leur note "averageRating" les livres, puis de prendre les 3 premiers, par ordre décroissant
         .sort({ averageRating: 'desc' })
         .limit(3)
         .then((books) => {
