@@ -32,7 +32,6 @@ exports.createBook = async (req, res, next) => {
 };
 
 exports.modifyBook = async (req, res, next) => {
-  console.log(req.params);
   try {
     const book = await Book.findById(req.params.id);
     if (!book) {
@@ -42,8 +41,15 @@ exports.modifyBook = async (req, res, next) => {
     if (book.userId !== req.auth.userId) {
       return res.status(403).json({ message: "Non autorisé" });
     }
-    console.log(book);
-    let bookObject = JSON.parse(book);
+    let bookObject = req.file
+      ? {
+          ...JSON.parse(req.body.book),
+          imageUrl: `${req.protocol}://${req.get("host")}/images/${
+            req.file.filename
+          }`,
+        }
+      : { ...req.body };
+
     delete bookObject._userId;
     delete bookObject.ratings;
     delete bookObject.averageRating;
@@ -51,17 +57,18 @@ exports.modifyBook = async (req, res, next) => {
       const imageBuffer = await sharp(req.file.buffer)
         .resize({ width: 800 })
         .toBuffer();
-      if (`images/${filename}`) {
-        fs.unlinkSync(`images/${filename}`);
-      }
+      fs.unlinkSync(`images/${filename}`);
       const newFilename = `${uuidv4()}.jpg`;
-      fs.writeFileSync(`images/${newFilename}`, imageBuffer);
+      await fs.promises.writeFile(`images/${newFilename}`, imageBuffer);
       bookObject = {
         ...bookObject,
         imageUrl: `${req.protocol}://${req.get("host")}/images/${newFilename}`,
       };
     }
-    await book.updateOne(bookObject);
+    await Book.updateOne(
+      { _id: req.params.id },
+      { ...bookObject, _id: req.params.id }
+    );
     res.status(200).json({ message: "Livre modifié" });
   } catch (error) {
     console.error(error);
